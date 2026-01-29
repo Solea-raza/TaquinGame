@@ -1,4 +1,9 @@
-# AVANCEMENT SEMAINE 26-01-26 ;
+# EQUIPE :
+- RATSIMANDRESY Stéphane
+- RANDRIAMASY Ajary
+- RAZAFINDRAINIBE Rotsy Soléa
+- 
+# AVANCEMENT SEMAINE 26-01-26 :
 
 - Affichage du plateau en 2D (pour commencer juste)
 - Chiffres en ordre
