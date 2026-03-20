@@ -2,98 +2,129 @@ package mg.arovy.taquin.model;
 
 public class Plateau {
 
-    private final int size;   // nombre total de cases
-    private int[] grid;       // tableau 1D
+    private final int size;
+    private int[] grid;
+    private int[] startGrid;  // MODIFIÉ : ajout
+    private int[] goalGrid;   // MODIFIÉ : ajout
 
     private GameState state;
-    public GameState getState(){
-        return state;
-    }
+    public GameState getState() { return state; }
+
     public Plateau(int dimension) {
-        this.size = dimension * dimension; // ex: 4 → 16 cases
+        this.size = dimension * dimension;
+        this.grid = new int[size];
+        this.startGrid = new int[size]; // MODIFIÉ : ajout
+        this.goalGrid = new int[size];  // MODIFIÉ : ajout
         initGrid();
     }
-    public void setState(GameState newState) {
-        this.state = newState;
-    }
+
+    public void setState(GameState newState) { this.state = newState; }
+
     private void initGrid() {
-        grid = new int[size];
-
-        for (int i = 0; i < size - 1; i++) {
-            grid[i] = i + 1;
-        }
-        grid[size - 1] = 0; // case vide
+        for (int i = 0; i < size - 1; i++) grid[i] = i + 1;
+        grid[size - 1] = 0;
     }
 
-    public int getCell(int index) {
-        return grid[index];
+    private void initGoalGrid() { // MODIFIÉ : ajout
+        for (int i = 0; i < size - 1; i++) goalGrid[i] = i + 1;
+        goalGrid[size - 1] = 0;
     }
 
-    public int getSize() {
-        return size;
+    public int getCell(int index) { return grid[index]; }
+    public int getSize()          { return size; }
+    public int[] getGoalGrid()    { return goalGrid.clone(); } // MODIFIÉ : ajout
+
+    // MODIFIÉ : remplace initGrid() + setState() manuels
+    public void prepareStart() {
+        initGrid();
+        state = GameState.CONFIG_START;
     }
+
+    // MODIFIÉ : ajout
+    public void randomizeStart() {
+        initGrid();
+        shuffleArray(grid);
+    }
+
+    // MODIFIÉ : ajout (remplace setState CONFIG_END dans MainActivity)
+    public void confirmStart() {
+        System.arraycopy(grid, 0, startGrid, 0, size);
+        initGoalGrid();
+        state = GameState.CONFIG_END;
+    }
+
+    // MODIFIÉ : ajout
+    public void randomizeGoal() {
+        initGoalGrid();
+        shuffleArray(goalGrid);
+    }
+
+    // MODIFIÉ : ajout (remplace setState PLAYING dans MainActivity)
+    public void confirmGoal() {
+        restoreStart();
+        state = GameState.PLAYING;
+    }
+
+    // MODIFIÉ : ajout
+    public void reset() {
+        restoreStart();
+        state = GameState.PLAYING;
+    }
+
+    private void restoreStart() { // MODIFIÉ : ajout
+        System.arraycopy(startGrid, 0, grid, 0, size);
+    }
+
     public void startNewGame() {
         initGrid();
         state = GameState.PLAYING;
     }
-    public void shuffle() {
-        java.util.Random random = new java.util.Random();
 
-        for (int i = 0; i < size; i++) {
-            int j = random.nextInt(size);
-
-            int temp = grid[i];
-            grid[i] = grid[j];
-            grid[j] = temp;
+    // MODIFIÉ : supprimé shuffle(), remplacé par randomizeStart()
+    private void shuffleArray(int[] arr) {
+        java.util.Random rng = new java.util.Random();
+        for (int i = 0; i < arr.length; i++) {
+            int j = rng.nextInt(arr.length);
+            int tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
         }
     }
+
     public void swap(int index1, int index2) {
-        int temp = grid[index1];
-        grid[index1] = grid[index2];
-        grid[index2] = temp;
+        int tmp = grid[index1]; grid[index1] = grid[index2]; grid[index2] = tmp;
     }
+
+    // MODIFIÉ : ajout
+    public void swapGoal(int i1, int i2) {
+        int tmp = goalGrid[i1]; goalGrid[i1] = goalGrid[i2]; goalGrid[i2] = tmp;
+    }
+
     public boolean move(int index) {
-        // Si on est en mode configuration, on ne bouge pas via move()
-        if (state == GameState.CONFIG_START || state == GameState.CONFIG_END) {
-            return false; // tout est géré via swap()
-        }
+        if (state == GameState.CONFIG_START || state == GameState.CONFIG_END) return false;
 
         int dimension = (int) Math.sqrt(size);
         int emptyIndex = findEmpty();
+        int row = index / dimension, col = index % dimension;
+        int emptyRow = emptyIndex / dimension, emptyCol = emptyIndex % dimension;
 
-        int row = index / dimension;
-        int col = index % dimension;
-
-        int emptyRow = emptyIndex / dimension;
-        int emptyCol = emptyIndex % dimension;
-
-        // Vérifie si la case est adjacente à la case vide
         if ((Math.abs(row - emptyRow) + Math.abs(col - emptyCol)) == 1) {
             grid[emptyIndex] = grid[index];
             grid[index] = 0;
-
-            if (isSolved()) {
-                state = GameState.FINISHED;
-            }
-
+            if (isSolved()) state = GameState.FINISHED;
             return true;
         }
-
         return false;
     }
+
     private int findEmpty() {
-        for (int i = 0; i < size; i++) {
-            if (grid[i] == 0) return i;
-        }
-        return -1; // au cas où, normalement impossible
+        for (int i = 0; i < size; i++) if (grid[i] == 0) return i;
+        return -1;
     }
+
+    // MODIFIÉ : compare à goalGrid au lieu de l'ordre canonique
     public boolean isSolved() {
-        for (int i = 0; i < size - 1; i++) {
-            if (grid[i] != i + 1) {
-                return false;
-            }
+        for (int i = 0; i < size; i++) {
+            if (grid[i] != goalGrid[i]) return false;
         }
-        return grid[size - 1] == 0;
+        return true;
     }
 }
-

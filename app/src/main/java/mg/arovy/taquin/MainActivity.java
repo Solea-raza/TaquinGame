@@ -7,6 +7,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import mg.arovy.taquin.model.GameState;
@@ -17,7 +18,6 @@ public class MainActivity extends AppCompatActivity {
 
     private PlateauView plateauView;
     private Plateau plateau;
-
     private ImageView imgStart;
     private Button btnNewGame, btnNext;
     private TextView tvTitle;
@@ -28,48 +28,82 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         plateauView = findViewById(R.id.taquinView);
-        imgStart = findViewById(R.id.imgStart);
-        btnNewGame = findViewById(R.id.btnNewGame);
-        btnNext = findViewById(R.id.btnNext);
-        tvTitle = findViewById(R.id.tvTitle);
+        imgStart    = findViewById(R.id.imgStart);
+        btnNewGame  = findViewById(R.id.btnNewGame);
+        btnNext     = findViewById(R.id.btnNext);
+        tvTitle     = findViewById(R.id.tvTitle);
 
-        // Au départ, seul l'écran d'accueil est visible
         plateauView.setVisibility(View.GONE);
         tvTitle.setVisibility(View.GONE);
         btnNext.setVisibility(View.GONE);
 
         btnNewGame.setOnClickListener(v -> {
-            // Masquer l'accueil
             imgStart.setVisibility(View.GONE);
             btnNewGame.setVisibility(View.GONE);
 
-            // Initialiser le plateau
             plateau = new Plateau(3);
-            plateau.shuffle();
-            plateau.setState(GameState.CONFIG_START);
+            plateau.prepareStart(); // MODIFIÉ : remplace shuffle() + setState()
 
-            // Passer le plateau à la vue et afficher
             plateauView.setPlateau(plateau);
             plateauView.setVisibility(View.VISIBLE);
-
-            // Titre et bouton Next
-            tvTitle.setText("Configuration départ");
             tvTitle.setVisibility(View.VISIBLE);
 
-            btnNext.setText("Next");
-            btnNext.setVisibility(View.VISIBLE);
+            // MODIFIÉ : dialog choix Manuel/Aléatoire pour le départ
+            new AlertDialog.Builder(this)
+                    .setTitle("Configuration départ")
+                    .setMessage("Comment configurer le départ ?")
+                    .setPositiveButton("Manuel", (d, w) -> {
+                        tvTitle.setText("Configuration départ");
+                        btnNext.setText("Confirmer départ");
+                        btnNext.setVisibility(View.VISIBLE);
+                    })
+                    .setNegativeButton("Aléatoire", (d, w) -> {
+                        plateau.randomizeStart();
+                        plateau.confirmStart(); // MODIFIÉ : sauvegarde départ
+                        plateauView.invalidate();
+                        showGoalConfigDialog(); // MODIFIÉ : enchaîne sur arrivée
+                    })
+                    .setCancelable(false)
+                    .show();
         });
+
+        // MODIFIÉ : btnNext gère confirmStart() et confirmGoal()
         btnNext.setOnClickListener(v -> {
             if (plateau.getState() == GameState.CONFIG_START) {
-                plateau.setState(GameState.CONFIG_END);
-                tvTitle.setText("Configuration arrivée");
-                // le plateau reste affiché, juste le titre change
+                plateau.confirmStart();
+                plateauView.invalidate();
+                showGoalConfigDialog();
             } else if (plateau.getState() == GameState.CONFIG_END) {
-                plateau.setState(GameState.PLAYING);
-                tvTitle.setText("En jeu");
-                btnNext.setVisibility(View.GONE);
+                startGame();
             }
-            plateauView.invalidate();
         });
+    }
+
+    // MODIFIÉ : ajout
+    private void showGoalConfigDialog() {
+        tvTitle.setText("Configuration arrivée");
+        new AlertDialog.Builder(this)
+                .setTitle("Configuration arrivée")
+                .setMessage("Comment configurer l'arrivée ?")
+                .setPositiveButton("Manuel", (d, w) -> {
+                    plateau.setState(GameState.CONFIG_END);
+                    btnNext.setText("Confirmer arrivée");
+                    btnNext.setVisibility(View.VISIBLE);
+                    plateauView.invalidate();
+                })
+                .setNegativeButton("Aléatoire", (d, w) -> {
+                    plateau.randomizeGoal();
+                    startGame();
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    // MODIFIÉ : ajout
+    private void startGame() {
+        plateau.confirmGoal(); // sauvegarde arrivée + restore départ
+        tvTitle.setText("En jeu");
+        btnNext.setVisibility(View.GONE);
+        plateauView.invalidate();
     }
 }
