@@ -11,7 +11,6 @@ import androidx.annotation.Nullable;
 
 import mg.arovy.taquin.model.Plateau;
 
-
 public class PlateauView extends View {
 
     private Plateau plateau;
@@ -22,7 +21,6 @@ public class PlateauView extends View {
     private float cellSize;
     private float offsetX;
     private float offsetY;
-
 
     public PlateauView(Context context) {
         super(context);
@@ -37,37 +35,41 @@ public class PlateauView extends View {
     private void initComponents() {
         linePaint = new Paint();
         linePaint.setColor(Color.BLACK);
-        linePaint.setStrokeWidth(4);
+        linePaint.setStrokeWidth(6);
         linePaint.setStyle(Paint.Style.STROKE);
 
         textPaint = new Paint();
-        textPaint.setColor(Color.BLACK);
+        textPaint.setColor(Color.BLUE);
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setAntiAlias(true);
+        textPaint.setFakeBoldText(true);
     }
 
     public void setPlateau(Plateau plateau) {
         this.plateau = plateau;
+        calculateDimensions();
         invalidate();
     }
 
     @Override
-    protected void onSizeChanged(int weight, int height, int oldweight, int oldheight) {
-        super.onSizeChanged(weight, height, oldweight, oldheight);
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
         calculateDimensions();
     }
-    private void calculateDimensions() {
 
-        if (plateau == null) return;
+    private void calculateDimensions() {
+        if (plateau == null || getWidth() == 0) return;
 
         int dimension = (int) Math.sqrt(plateau.getSize());
 
-        squareSize = Math.min(getWidth(), getHeight());
+        squareSize = Math.min(getWidth(), getHeight()) * 0.9f;
         cellSize = squareSize / dimension;
+
+
         offsetX = (getWidth() - squareSize) / 2f;
         offsetY = (getHeight() - squareSize) / 2f;
 
-        textPaint.setTextSize(cellSize / 2f);
+        textPaint.setTextSize(cellSize / 2.5f);
     }
 
     @Override
@@ -78,25 +80,27 @@ public class PlateauView extends View {
 
         int dimension = (int) Math.sqrt(plateau.getSize());
 
-        // Dessiner lignes
+
+        canvas.drawRect(offsetX, offsetY, offsetX + squareSize, offsetY + squareSize, linePaint);
+
         for (int i = 1; i < dimension; i++) {
+
             float x = offsetX + i * cellSize;
             canvas.drawLine(x, offsetY, x, offsetY + squareSize, linePaint);
-        }
-        for (int i = 1; i < dimension; i++) {
+
             float y = offsetY + i * cellSize;
             canvas.drawLine(offsetX, y, offsetX + squareSize, y, linePaint);
         }
-        canvas.drawRect(offsetX, offsetY, offsetX + squareSize, offsetY + squareSize, linePaint);
 
-        // Dessiner chiffres
         for (int i = 0; i < plateau.getSize(); i++) {
             int number = plateau.getCell(i);
+
             if (number != 0) {
                 int row = i / dimension;
                 int col = i % dimension;
 
                 float centerX = offsetX + col * cellSize + cellSize / 2f;
+
                 float centerY = offsetY + row * cellSize + cellSize / 2f
                         - ((textPaint.descent() + textPaint.ascent()) / 2f);
 
