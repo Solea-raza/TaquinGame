@@ -34,10 +34,9 @@ public class Plateau {
     }
     public void startNewGame() {
         initGrid();
-        shuffle();
         state = GameState.PLAYING;
     }
-    private void shuffle() {
+    public void shuffle() {
         java.util.Random random = new java.util.Random();
 
         for (int i = 0; i < size; i++) {
