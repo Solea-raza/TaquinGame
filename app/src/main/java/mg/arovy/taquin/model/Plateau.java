@@ -34,6 +34,21 @@ public class Plateau {
     public int getSize()          { return size; }
     public int[] getGoalGrid()    { return goalGrid.clone(); } // MODIFIÉ : ajout
 
+    //getter pour startGrid
+    public int[] getStartGrid() {
+        return startGrid.clone();
+    }
+
+    //setter pour startGrid
+    public void setStartGrid(int[] grid){
+        System.arraycopy(grid, 0, this.startGrid, 0, size);
+    }
+
+    //setter pour goalGrid
+    public void setGoalGrid(int[] grid){
+        System.arraycopy(grid, 0, this.goalGrid, 0, size);
+    }
+
     // MODIFIÉ : remplace initGrid() + setState() manuels
     public void prepareStart() {
         initGrid();

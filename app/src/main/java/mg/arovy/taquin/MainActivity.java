@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import mg.arovy.taquin.model.GameState;
 import mg.arovy.taquin.model.Plateau;
 import mg.arovy.taquin.views.PlateauView;
+import mg.arovy.taquin.util.SaveManager;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -21,6 +22,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imgStart;
     private Button btnNewGame, btnNext;
     private TextView tvTitle;
+    private SaveManager saveManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,6 +34,9 @@ public class MainActivity extends AppCompatActivity {
         btnNewGame  = findViewById(R.id.btnNewGame);
         btnNext     = findViewById(R.id.btnNext);
         tvTitle     = findViewById(R.id.tvTitle);
+
+        // Initialisation du gestionnaire de sauvegarde
+        saveManager = new SaveManager(this);
 
         plateauView.setVisibility(View.GONE);
         tvTitle.setVisibility(View.GONE);
@@ -48,24 +53,37 @@ public class MainActivity extends AppCompatActivity {
             plateauView.setVisibility(View.VISIBLE);
             tvTitle.setVisibility(View.VISIBLE);
 
+            //Proposition de reprendre la sauvegarde si elle existe
+            if (saveManager.hasSave()) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Partie non finie trouvee")
+                        .setMessage("Voulez-vous reprendre la partie ?")
+                        .setPositiveButton("Oui", (d, w) -> loadGameSave())
+                        .setNegativeButton("Non", (d, w) -> showGoalConfigDialog())
+                        .setCancelable(false)
+                        .show();
+            } else {
+                showStartConfigDialog();
+            }
+
             // MODIFIÉ : dialog choix Manuel/Aléatoire pour le départ
-            new AlertDialog.Builder(this)
-                    .setTitle("Configuration départ")
-                    .setMessage("Comment configurer le départ ?")
-                    .setPositiveButton("Manuel", (d, w) -> {
-                        tvTitle.setText("Configuration départ");
-                        btnNext.setText("Confirmer départ");
-                        btnNext.setVisibility(View.VISIBLE);
-                    })
-                    .setNegativeButton("Aléatoire", (d, w) -> {
-                        plateau.randomizeStart();
-                        plateau.confirmStart(); // MODIFIÉ : sauvegarde départ
-                        plateauView.invalidate();
-                        showGoalConfigDialog(); // MODIFIÉ : enchaîne sur arrivée
-                    })
-                    .setCancelable(false)
-                    .show();
-        });
+                new AlertDialog.Builder(this)
+                        .setTitle("Configuration départ")
+                        .setMessage("Comment configurer le départ ?")
+                        .setPositiveButton("Manuel", (d, w) -> {
+                            tvTitle.setText("Configuration départ");
+                            btnNext.setText("Confirmer départ");
+                            btnNext.setVisibility(View.VISIBLE);
+                        })
+                        .setNegativeButton("Aléatoire", (d, w) -> {
+                            plateau.randomizeStart();
+                            plateau.confirmStart();
+                            plateauView.invalidate();
+                            showGoalConfigDialog();
+                        })
+                        .setCancelable(false)
+                        .show();
+                    });
 
         // MODIFIÉ : btnNext gère confirmStart() et confirmGoal()
         btnNext.setOnClickListener(v -> {
@@ -78,6 +96,24 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+        private void showStartConfigDialog() {
+            new AlertDialog.Builder(this)
+                    .setTitle("Configuration départ")
+                    .setMessage("Comment configurer le départ ?")
+                    .setPositiveButton("Manuel", (d, w) -> {
+                        tvTitle.setText("Configuration départ");
+                        btnNext.setText("Confirmer départ");
+                        btnNext.setVisibility(View.VISIBLE);
+                    })
+                    .setNegativeButton("Aléatoire", (d, w) -> {
+                        plateau.randomizeStart();
+                        plateau.confirmStart();
+                        plateauView.invalidate();
+                        showGoalConfigDialog();
+                    })
+                    .setCancelable(false)
+                    .show();
+        }
 
     // MODIFIÉ : ajout
     private void showGoalConfigDialog() {
@@ -102,8 +138,23 @@ public class MainActivity extends AppCompatActivity {
     // MODIFIÉ : ajout
     private void startGame() {
         plateau.confirmGoal(); // sauvegarde arrivée + restore départ
+        //sauvegarde automatique des grille depart et arrivee
+        saveManager.save( (int) Math.sqrt(plateau.getSize()),plateau.getStartGrid(), plateau.getGoalGrid());
         tvTitle.setText("En jeu");
         btnNext.setVisibility(View.GONE);
         plateauView.invalidate();
+    }
+
+    //charge la sauvegarde et demarre directement
+    private  void loadGameSave(){
+        int[] startGrid = saveManager.loadStartGrid();
+        int[] goalGrid = saveManager.loadGoalGrid();
+                plateau.setStartGrid(startGrid);
+                plateau.setGoalGrid(goalGrid);
+                plateau.confirmGoal();
+
+                tvTitle.setText("En jeu");
+                btnNext.setVisibility(View.GONE);
+                plateauView.invalidate();
     }
 }
