@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 
 import mg.arovy.taquin.model.Plateau;
 
+
 public class PlateauView extends View {
 
     private Plateau plateau;
@@ -21,6 +22,7 @@ public class PlateauView extends View {
     private float cellSize;
     private float offsetX;
     private float offsetY;
+
 
     public PlateauView(Context context) {
         super(context);
@@ -56,10 +58,12 @@ public class PlateauView extends View {
     }
     private void calculateDimensions() {
 
-        int rows = plateau.getRows();
+        if (plateau == null) return;
+
+        int dimension = (int) Math.sqrt(plateau.getSize());
 
         squareSize = Math.min(getWidth(), getHeight());
-        cellSize = squareSize / rows;
+        cellSize = squareSize / dimension;
         offsetX = (getWidth() - squareSize) / 2f;
         offsetY = (getHeight() - squareSize) / 2f;
 
@@ -70,32 +74,34 @@ public class PlateauView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        int rows = plateau.getRows();
-        int cols = plateau.getCols();
+        if (plateau == null) return;
+
+        int dimension = (int) Math.sqrt(plateau.getSize());
 
         // Dessiner lignes
-        for (int i = 1; i < cols; i++) {
+        for (int i = 1; i < dimension; i++) {
             float x = offsetX + i * cellSize;
             canvas.drawLine(x, offsetY, x, offsetY + squareSize, linePaint);
         }
-        for (int i = 1; i < rows; i++) {
+        for (int i = 1; i < dimension; i++) {
             float y = offsetY + i * cellSize;
             canvas.drawLine(offsetX, y, offsetX + squareSize, y, linePaint);
         }
         canvas.drawRect(offsetX, offsetY, offsetX + squareSize, offsetY + squareSize, linePaint);
 
-        //TODO : mettre à jour le dessin des chiffres en vue de l'ajout des fonctionnalités ultérieures
+        // Dessiner chiffres
+        for (int i = 0; i < plateau.getSize(); i++) {
+            int number = plateau.getCell(i);
+            if (number != 0) {
+                int row = i / dimension;
+                int col = i % dimension;
 
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < cols; col++) {
-                int number = plateau.getCell(row, col);
-                if (number != 0) {
-                    float centerX = offsetX + col * cellSize + cellSize / 2f;
-                    float centerY = offsetY + row * cellSize + cellSize / 2f - ((textPaint.descent() + textPaint.ascent()) / 2f);
-                    canvas.drawText(String.valueOf(number), centerX, centerY, textPaint);
-                }
+                float centerX = offsetX + col * cellSize + cellSize / 2f;
+                float centerY = offsetY + row * cellSize + cellSize / 2f
+                        - ((textPaint.descent() + textPaint.ascent()) / 2f);
+
+                canvas.drawText(String.valueOf(number), centerX, centerY, textPaint);
             }
         }
     }
 }
-

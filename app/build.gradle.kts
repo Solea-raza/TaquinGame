@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "mg.arovy.taquinsample"
-    compileSdk = 34
+    namespace = "mg.arovy.taquin"
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "mg.arovy.taquinsample"
+        applicationId = "mg.arovy.taquin"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

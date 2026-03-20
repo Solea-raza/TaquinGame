@@ -1,39 +1,50 @@
 package mg.arovy.taquin.model;
 
-// TODO : mettre le plateau en une seule dimension
 public class Plateau {
-    private final int rows;
-    private final int cols;
-    private int[][] grid;
-    public Plateau(int rows, int cols) {
-        this.rows = rows;
-        this.cols = cols;
+
+    private final int size;   // nombre total de cases
+    private int[] grid;       // tableau 1D
+
+    private GameState state;
+    public GameState getState(){
+        return state;
+    }
+    public Plateau(int dimension) {
+        this.size = dimension * dimension; // ex: 4 → 16 cases
         initGrid();
     }
 
     private void initGrid() {
-        grid = new int[rows][cols];
-        int number = 1;
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < cols; col++) {
-                if (number < rows * cols) {
-                    grid[row][col] = number++;
-                } else {
-                    grid[row][col] = 0; // case vide
-                }
-            }
+        grid = new int[size];
+
+        for (int i = 0; i < size - 1; i++) {
+            grid[i] = i + 1;
+        }
+        grid[size - 1] = 0; // case vide
+    }
+
+    public int getCell(int index) {
+        return grid[index];
+    }
+
+    public int getSize() {
+        return size;
+    }
+    public void startNewGame() {
+        initGrid();
+        shuffle();
+        state = GameState.PLAYING;
+    }
+    private void shuffle() {
+        java.util.Random random = new java.util.Random();
+
+        for (int i = 0; i < size; i++) {
+            int j = random.nextInt(size);
+
+            int temp = grid[i];
+            grid[i] = grid[j];
+            grid[j] = temp;
         }
     }
-    public int getCell(int row, int col) {
-        return grid[row][col];
-    }
-
-    public int getRows() {
-        return rows;
-    }
-    public int getCols() {
-        return cols;
-    }
-
 }
 
