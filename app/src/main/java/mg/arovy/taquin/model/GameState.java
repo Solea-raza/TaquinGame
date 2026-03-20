@@ -4,4 +4,6 @@ public enum GameState {
     INIT,
     PLAYING,
     FINISHED,
+    CONFIG_START,
+    CONFIG_END,
 }

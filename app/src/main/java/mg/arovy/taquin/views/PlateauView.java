@@ -5,10 +5,12 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.annotation.Nullable;
 
+import mg.arovy.taquin.model.GameState;
 import mg.arovy.taquin.model.Plateau;
 
 
@@ -22,8 +24,8 @@ public class PlateauView extends View {
     private float cellSize;
     private float offsetX;
     private float offsetY;
-
-
+    private int selectedIndex = -1;
+    private Paint selectedPaint;
     public PlateauView(Context context) {
         super(context);
         initComponents();
@@ -44,6 +46,10 @@ public class PlateauView extends View {
         textPaint.setColor(Color.BLACK);
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setAntiAlias(true);
+
+        selectedPaint = new Paint();
+        selectedPaint.setColor(0xFFB19CD9); // violet pastel (ARGB)
+        selectedPaint.setStyle(Paint.Style.FILL);
     }
 
     public void setPlateau(Plateau plateau) {
@@ -92,16 +98,57 @@ public class PlateauView extends View {
         // Dessiner chiffres
         for (int i = 0; i < plateau.getSize(); i++) {
             int number = plateau.getCell(i);
+            int row = i / dimension;
+            int col = i % dimension;
+
+            float left = offsetX + col * cellSize;
+            float top = offsetY + row * cellSize;
+            float right = left + cellSize;
+            float bottom = top + cellSize;
+
+            // case sélectionnée en mode config
+            if ((plateau.getState() == GameState.CONFIG_START || plateau.getState() == GameState.CONFIG_END)
+                    && i == selectedIndex) {
+                canvas.drawRect(left, top, right, bottom, selectedPaint);
+            }
+
             if (number != 0) {
-                int row = i / dimension;
-                int col = i % dimension;
-
-                float centerX = offsetX + col * cellSize + cellSize / 2f;
-                float centerY = offsetY + row * cellSize + cellSize / 2f
-                        - ((textPaint.descent() + textPaint.ascent()) / 2f);
-
+                float centerX = left + cellSize / 2f;
+                float centerY = top + cellSize / 2f - ((textPaint.descent() + textPaint.ascent()) / 2f);
                 canvas.drawText(String.valueOf(number), centerX, centerY, textPaint);
             }
         }
+    }
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+
+            int dimension = (int) Math.sqrt(plateau.getSize());
+
+            float x = event.getX() - offsetX;
+            float y = event.getY() - offsetY;
+
+            int col = (int) (x / cellSize);
+            int row = (int) (y / cellSize);
+
+            int index = row * dimension + col;
+
+            if (plateau.getState() == GameState.CONFIG_START || plateau.getState() == GameState.CONFIG_END) {
+                if (selectedIndex == -1) {
+                    selectedIndex = index; // première case sélectionnée
+                } else {
+                    if (selectedIndex != index) {
+                        plateau.swap(selectedIndex, index); // swap
+                    }
+                    selectedIndex = -1; // reset sélection
+                }
+                invalidate(); // redessiner pour mettre à jour la couleur
+            } else {
+                if (plateau.move(index)) {
+                    invalidate();
+                }
+            }
+        }
+        return true;
     }
 }
