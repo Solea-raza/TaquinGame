@@ -172,9 +172,6 @@ public class PlateauView extends View {
                             .getSaveManager()
                             .saveCurrentGrid(plateau.getCurrentGrid()); // ✅ AJOUT
                     invalidate();
-                    if (plateau.getState() == GameState.FINISHED) {
-                        ((MainActivity) getContext()).onGameWon();
-                    }
                 }
             }
         }

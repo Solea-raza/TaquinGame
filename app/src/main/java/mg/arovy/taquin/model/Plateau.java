@@ -4,8 +4,8 @@ public class Plateau {
 
     private final int size;
     private int[] grid;
-    private int[] startGrid;  // MODIFIÉ : ajout
-    private int[] goalGrid;   // MODIFIÉ : ajout
+    private int[] startGrid;
+    private int[] goalGrid;
 
     private GameState state;
     public GameState getState() { return state; }
@@ -13,8 +13,8 @@ public class Plateau {
     public Plateau(int dimension) {
         this.size = dimension * dimension;
         this.grid = new int[size];
-        this.startGrid = new int[size]; // MODIFIÉ : ajout
-        this.goalGrid = new int[size];  // MODIFIÉ : ajout
+        this.startGrid = new int[size];
+        this.goalGrid = new int[size];
         initGrid();
     }
 
@@ -25,7 +25,7 @@ public class Plateau {
         grid[size - 1] = 0;
     }
 
-    private void initGoalGrid() { // MODIFIÉ : ajout
+    private void initGoalGrid() {
         for (int i = 0; i < size - 1; i++) goalGrid[i] = i + 1;
         goalGrid[size - 1] = 0;
     }
@@ -34,17 +34,13 @@ public class Plateau {
     public int getSize()          { return size; }
     public int[] getGoalGrid()    { return goalGrid.clone(); } // MODIFIÉ : ajout
 
-    //getter pour startGrid
+    //getter et setters
     public int[] getStartGrid() {
         return startGrid.clone();
     }
-
-    //setter pour startGrid
     public void setStartGrid(int[] grid){
         System.arraycopy(grid, 0, this.startGrid, 0, size);
     }
-
-    //setter pour goalGrid
     public void setGoalGrid(int[] grid){
         System.arraycopy(grid, 0, this.goalGrid, 0, size);
     }
@@ -54,26 +50,24 @@ public class Plateau {
     public void setCurrentGrid(int[] current) {
         System.arraycopy(current, 0, this.grid, 0, size);
     }
-    // MODIFIÉ : remplace initGrid() + setState() manuels
+
     public void prepareStart() {
         initGrid();
         state = GameState.CONFIG_START;
     }
 
-    // MODIFIÉ : ajout
+
     public void randomizeStart() {
         initGrid();
         shuffleArray(grid);
     }
 
-    // MODIFIÉ : ajout (remplace setState CONFIG_END dans MainActivity)
     public void confirmStart() {
         System.arraycopy(grid, 0, startGrid, 0, size);
         initGoalGrid();
         state = GameState.CONFIG_END;
     }
 
-    // MODIFIÉ : ajout
     public void randomizeGoal() {
         initGoalGrid();
         shuffleArray(goalGrid);

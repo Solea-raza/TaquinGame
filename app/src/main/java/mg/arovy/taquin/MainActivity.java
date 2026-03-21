@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -29,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
     private Plateau plateau;
     private ImageView imgStart;
     private Button btnNewGame, btnNext, btnResume, btnAutoPlay; // ✅ ajout btnResume
+    private ImageButton btnRestart,btnQuit;
     private TextView tvTitle;
     private SaveManager saveManager;
 
@@ -41,11 +43,13 @@ public class MainActivity extends AppCompatActivity {
         imgStart     = findViewById(R.id.imgStart);
         btnNewGame   = findViewById(R.id.btnNewGame);
         btnNext      = findViewById(R.id.btnNext);
-        btnResume    = findViewById(R.id.btnResume); // ✅ ajout
         btnAutoPlay  = findViewById(R.id.btnAutoPlay);
+        btnResume    = findViewById(R.id.btnResume);
         tvTitle      = findViewById(R.id.tvTitle);
         miniGoalView = findViewById(R.id.miniGoalView);
         tvGoalLabel  = findViewById(R.id.tvGoalLabel);
+        btnRestart = findViewById(R.id.btnRestart);
+        btnQuit    = findViewById(R.id.btnQuit);
 
 
         saveManager = new SaveManager(this);
@@ -56,14 +60,14 @@ public class MainActivity extends AppCompatActivity {
         miniGoalView.setVisibility(View.GONE);
         tvGoalLabel.setVisibility(View.GONE);
 
-        // ✅ Afficher btnResume sur l'écran d'accueil si sauvegarde existe
+        // affiche un bouton reprendre sur l'écran d'accueil si sauvegarde existe
         if (saveManager.hasSave()) {
             btnResume.setVisibility(View.VISIBLE);
         } else {
             btnResume.setVisibility(View.GONE);
         }
 
-        // ✅ Reprendre la partie sauvegardée
+        // Reprendre la partie sauvegardée
         btnResume.setOnClickListener(v -> {
             imgStart.setVisibility(View.GONE);
             btnNewGame.setVisibility(View.GONE);
@@ -77,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
             loadGameSave();
         });
 
-        // ✅ Nouvelle partie — pas de popup, va direct en config
+        // Nouvelle partie
         btnNewGame.setOnClickListener(v -> {
             imgStart.setVisibility(View.GONE);
             btnNewGame.setVisibility(View.GONE);
@@ -142,6 +146,13 @@ public class MainActivity extends AppCompatActivity {
                 }
             }).start();
         });
+        btnRestart.setOnClickListener(v -> {
+            plateau.reset();
+            plateauView.invalidate();
+        });
+        btnQuit.setOnClickListener(v -> {
+            finish();            // ferme l'activité actuelle
+        });
     }
 
     @SuppressLint("SetTextI18n")
@@ -192,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
                 plateau.getStartGrid(),
                 plateau.getGoalGrid()
         );
-        // ✅ Sauvegarder l'état initial comme currentGrid aussi
+        // Sauvegarder l'état initial comme currentGrid aussi
         saveManager.saveCurrentGrid(plateau.getCurrentGrid());
 
         tvTitle.setText("En jeu");
@@ -204,6 +215,8 @@ public class MainActivity extends AppCompatActivity {
         miniGoalView.setGoalGrid(plateau.getGoalGrid(), dim);
         miniGoalView.setVisibility(View.VISIBLE);
         tvGoalLabel.setVisibility(View.VISIBLE);
+        btnRestart.setVisibility(View.VISIBLE);
+        btnQuit.setVisibility(View.VISIBLE);
     }
 
     private void loadGameSave() {

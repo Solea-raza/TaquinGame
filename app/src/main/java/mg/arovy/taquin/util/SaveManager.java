@@ -66,14 +66,15 @@ public class SaveManager {
         int[] grid = new int[total];
 
         for (int i = 0; i < total; i++) {
-            // ✅ Utiliser -2 comme sentinelle au lieu de -1
+            // Utiliser -2 comme sentinelle au lieu de -1
             // car 0 est une valeur valide (case vide) et -1 aussi potentiellement
             int value = prefs.getInt(prefix + i, -2);
-            if (value == -2) return null; // clé vraiment absente
+            if (value == -2) return null;
             grid[i] = value;
         }
         return grid;
     }
+    // enregistrer l'état courant de la grille
     public void saveCurrentGrid(int[] currentGrid) {
         SharedPreferences.Editor editor = prefs.edit();
         for (int i = 0; i < currentGrid.length; i++) {
@@ -82,6 +83,7 @@ public class SaveManager {
         editor.apply();
     }
 
+    // affiche l'état courant de la grille
     public int[] loadCurrentGrid() {
         return loadGrid("current_");
     }
