@@ -48,7 +48,12 @@ public class Plateau {
     public void setGoalGrid(int[] grid){
         System.arraycopy(grid, 0, this.goalGrid, 0, size);
     }
-
+    public int[] getCurrentGrid() {
+        return grid.clone();
+    }
+    public void setCurrentGrid(int[] current) {
+        System.arraycopy(current, 0, this.grid, 0, size);
+    }
     // MODIFIÉ : remplace initGrid() + setState() manuels
     public void prepareStart() {
         initGrid();
@@ -142,4 +147,5 @@ public class Plateau {
         }
         return true;
     }
+
 }

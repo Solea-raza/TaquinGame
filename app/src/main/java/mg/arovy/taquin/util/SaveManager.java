@@ -7,8 +7,8 @@ import mg.arovy.taquin.views.PlateauView;
 public class SaveManager {
     private static String PREFS_NAME = "t_save";
     private static String KEY_DIM = "dim";
-    private static String PREFIX_STRART = "start ";
-    private static String PREFIX_GOAL = "goal ";
+    private static String PREFIX_STRART = "start_";
+    private static String PREFIX_GOAL = "goal_";
 
     private SharedPreferences prefs;
 
@@ -47,7 +47,8 @@ public class SaveManager {
     public Boolean hasSave() {
         return prefs.contains(KEY_DIM)
                 && prefs.contains(PREFIX_STRART + "0")
-                && prefs.contains(PREFIX_GOAL + "0");
+                && prefs.contains(PREFIX_GOAL + "0")
+                && prefs.contains("current_0");
     }
 
     //supprime toutes les donnees sauvegardees
@@ -65,11 +66,23 @@ public class SaveManager {
         int[] grid = new int[total];
 
         for (int i = 0; i < total; i++) {
-            //valeur par defaut -1 permet de detecter une cle manquante
-            int value = prefs.getInt(prefix + i, -1);
-            if (value == -1) return null;
+            // ✅ Utiliser -2 comme sentinelle au lieu de -1
+            // car 0 est une valeur valide (case vide) et -1 aussi potentiellement
+            int value = prefs.getInt(prefix + i, -2);
+            if (value == -2) return null; // clé vraiment absente
             grid[i] = value;
         }
         return grid;
+    }
+    public void saveCurrentGrid(int[] currentGrid) {
+        SharedPreferences.Editor editor = prefs.edit();
+        for (int i = 0; i < currentGrid.length; i++) {
+            editor.putInt("current_" + i, currentGrid[i]);
+        }
+        editor.apply();
+    }
+
+    public int[] loadCurrentGrid() {
+        return loadGrid("current_");
     }
 }

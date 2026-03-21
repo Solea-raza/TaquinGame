@@ -1,5 +1,6 @@
 package mg.arovy.taquin;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -22,7 +23,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvGoalLabel;
     private Plateau plateau;
     private ImageView imgStart;
-    private Button btnNewGame, btnNext;
+    private Button btnNewGame, btnNext, btnResume; // ✅ ajout btnResume
     private TextView tvTitle;
     private SaveManager saveManager;
 
@@ -35,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
         imgStart     = findViewById(R.id.imgStart);
         btnNewGame   = findViewById(R.id.btnNewGame);
         btnNext      = findViewById(R.id.btnNext);
+        btnResume    = findViewById(R.id.btnResume); // ✅ ajout
         tvTitle      = findViewById(R.id.tvTitle);
         miniGoalView = findViewById(R.id.miniGoalView);
         tvGoalLabel  = findViewById(R.id.tvGoalLabel);
@@ -47,9 +49,32 @@ public class MainActivity extends AppCompatActivity {
         miniGoalView.setVisibility(View.GONE);
         tvGoalLabel.setVisibility(View.GONE);
 
+        // ✅ Afficher btnResume sur l'écran d'accueil si sauvegarde existe
+        if (saveManager.hasSave()) {
+            btnResume.setVisibility(View.VISIBLE);
+        } else {
+            btnResume.setVisibility(View.GONE);
+        }
+
+        // ✅ Reprendre la partie sauvegardée
+        btnResume.setOnClickListener(v -> {
+            imgStart.setVisibility(View.GONE);
+            btnNewGame.setVisibility(View.GONE);
+            btnResume.setVisibility(View.GONE);
+
+            plateau = new Plateau(3);
+            plateauView.setPlateau(plateau);
+            plateauView.setVisibility(View.VISIBLE);
+            tvTitle.setVisibility(View.VISIBLE);
+
+            loadGameSave();
+        });
+
+        // ✅ Nouvelle partie — pas de popup, va direct en config
         btnNewGame.setOnClickListener(v -> {
             imgStart.setVisibility(View.GONE);
             btnNewGame.setVisibility(View.GONE);
+            btnResume.setVisibility(View.GONE);
 
             plateau = new Plateau(3);
             plateau.prepareStart();
@@ -58,19 +83,8 @@ public class MainActivity extends AppCompatActivity {
             plateauView.setVisibility(View.VISIBLE);
             tvTitle.setVisibility(View.VISIBLE);
 
-            // ✅ Un seul dialog
-            if (saveManager.hasSave()) {
-                new AlertDialog.Builder(this)
-                        .setTitle("Partie non finie trouvée")
-                        .setMessage("Voulez-vous reprendre la partie ?")
-                        .setPositiveButton("Oui", (d, w) -> loadGameSave())
-                        .setNegativeButton("Non", (d, w) -> showStartConfigDialog())
-                        .setCancelable(false)
-                        .show();
-            } else {
-                showStartConfigDialog();
-            }
-        }); // ✅ listener fermé ici
+            showStartConfigDialog();
+        });
 
         btnNext.setOnClickListener(v -> {
             if (plateau.getState() == GameState.CONFIG_START) {
@@ -83,6 +97,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @SuppressLint("SetTextI18n")
     private void showStartConfigDialog() {
         tvTitle.setText("Configuration départ");
         new AlertDialog.Builder(this)
@@ -102,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
+    @SuppressLint("SetTextI18n")
     private void showGoalConfigDialog() {
         tvTitle.setText("Configuration arrivée");
         new AlertDialog.Builder(this)
@@ -121,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
+    @SuppressLint("SetTextI18n")
     private void startGame() {
         plateau.confirmGoal();
         saveManager.save(
@@ -128,6 +145,9 @@ public class MainActivity extends AppCompatActivity {
                 plateau.getStartGrid(),
                 plateau.getGoalGrid()
         );
+        // ✅ Sauvegarder l'état initial comme currentGrid aussi
+        saveManager.saveCurrentGrid(plateau.getCurrentGrid());
+
         tvTitle.setText("En jeu");
         btnNext.setVisibility(View.GONE);
         plateauView.invalidate();
@@ -139,11 +159,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadGameSave() {
-        int[] startGrid = saveManager.loadStartGrid();
-        int[] goalGrid  = saveManager.loadGoalGrid();
+        int[] startGrid   = saveManager.loadStartGrid();
+        int[] goalGrid    = saveManager.loadGoalGrid();
+        int[] currentGrid = saveManager.loadCurrentGrid(); // ✅ ajout
 
-        // ✅ Guard sauvegarde corrompue
-        if (startGrid == null || goalGrid == null) {
+        if (startGrid == null || goalGrid == null || currentGrid == null) {
             saveManager.clear();
             showStartConfigDialog();
             return;
@@ -151,7 +171,12 @@ public class MainActivity extends AppCompatActivity {
 
         plateau.setStartGrid(startGrid);
         plateau.setGoalGrid(goalGrid);
-        plateau.confirmGoal();
+
+// 👇 IMPORTANT : ne pas reset la grille
+        plateau.setCurrentGrid(currentGrid);
+
+// remettre juste l’état
+        plateau.setState(GameState.PLAYING);
 
         tvTitle.setText("En jeu");
         btnNext.setVisibility(View.GONE);
@@ -161,5 +186,43 @@ public class MainActivity extends AppCompatActivity {
         miniGoalView.setGoalGrid(plateau.getGoalGrid(), dim);
         miniGoalView.setVisibility(View.VISIBLE);
         tvGoalLabel.setVisibility(View.VISIBLE);
+    }
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (plateau != null && plateau.getState() == GameState.PLAYING) {
+            saveManager.saveCurrentGrid(plateau.getCurrentGrid());
+        }
+    }
+    public SaveManager getSaveManager() {
+        return saveManager;
+    }
+    public void onGameWon() {
+        new AlertDialog.Builder(this)
+                .setTitle("Victoire")
+                .setMessage("Bravo ! Tu as résolu le taquin !")
+                .setPositiveButton("Nouvelle partie", (d, w) -> {
+                    restartGame();
+                })
+                .setNegativeButton("Quitter", (d, w) -> finish())
+                .setCancelable(false)
+                .show();
+
+        saveManager.clear(); // optionnel : supprimer la sauvegarde
+    }
+    private void restartGame() {
+        plateau = new Plateau(3); // ou dimension sauvegardée si tu veux être clean
+        plateau.prepareStart();
+
+        plateauView.setPlateau(plateau);
+        plateauView.invalidate();
+
+        tvTitle.setText("Configuration départ");
+
+        miniGoalView.setVisibility(View.GONE);
+        tvGoalLabel.setVisibility(View.GONE);
+        btnNext.setVisibility(View.GONE);
+
+        showStartConfigDialog();
     }
 }

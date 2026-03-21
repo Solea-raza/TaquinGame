@@ -10,6 +10,7 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 
+import mg.arovy.taquin.MainActivity;
 import mg.arovy.taquin.model.GameState;
 import mg.arovy.taquin.model.Plateau;
 
@@ -167,7 +168,13 @@ public class PlateauView extends View {
 
             } else {
                 if (plateau.move(index)) {
+                    ((MainActivity) getContext())
+                            .getSaveManager()
+                            .saveCurrentGrid(plateau.getCurrentGrid()); // ✅ AJOUT
                     invalidate();
+                    if (plateau.getState() == GameState.FINISHED) {
+                        ((MainActivity) getContext()).onGameWon();
+                    }
                 }
             }
         }
