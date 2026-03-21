@@ -1,6 +1,5 @@
 package mg.arovy.taquin;
 
-import android.graphics.Color;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -12,12 +11,15 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import mg.arovy.taquin.model.GameState;
 import mg.arovy.taquin.model.Plateau;
+import mg.arovy.taquin.views.MiniPlateauView;
 import mg.arovy.taquin.views.PlateauView;
 import mg.arovy.taquin.util.SaveManager;
 
 public class MainActivity extends AppCompatActivity {
 
     private PlateauView plateauView;
+    private MiniPlateauView miniGoalView;
+    private TextView tvGoalLabel;
     private Plateau plateau;
     private ImageView imgStart;
     private Button btnNewGame, btnNext;
@@ -29,63 +31,47 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        plateauView = findViewById(R.id.taquinView);
-        imgStart    = findViewById(R.id.imgStart);
-        btnNewGame  = findViewById(R.id.btnNewGame);
-        btnNext     = findViewById(R.id.btnNext);
-        tvTitle     = findViewById(R.id.tvTitle);
+        plateauView  = findViewById(R.id.taquinView);
+        imgStart     = findViewById(R.id.imgStart);
+        btnNewGame   = findViewById(R.id.btnNewGame);
+        btnNext      = findViewById(R.id.btnNext);
+        tvTitle      = findViewById(R.id.tvTitle);
+        miniGoalView = findViewById(R.id.miniGoalView);
+        tvGoalLabel  = findViewById(R.id.tvGoalLabel);
 
-        // Initialisation du gestionnaire de sauvegarde
         saveManager = new SaveManager(this);
 
         plateauView.setVisibility(View.GONE);
         tvTitle.setVisibility(View.GONE);
         btnNext.setVisibility(View.GONE);
+        miniGoalView.setVisibility(View.GONE);
+        tvGoalLabel.setVisibility(View.GONE);
 
         btnNewGame.setOnClickListener(v -> {
             imgStart.setVisibility(View.GONE);
             btnNewGame.setVisibility(View.GONE);
 
             plateau = new Plateau(3);
-            plateau.prepareStart(); // MODIFIÉ : remplace shuffle() + setState()
+            plateau.prepareStart();
 
             plateauView.setPlateau(plateau);
             plateauView.setVisibility(View.VISIBLE);
             tvTitle.setVisibility(View.VISIBLE);
 
-            //Proposition de reprendre la sauvegarde si elle existe
+            // ✅ Un seul dialog
             if (saveManager.hasSave()) {
                 new AlertDialog.Builder(this)
-                        .setTitle("Partie non finie trouvee")
+                        .setTitle("Partie non finie trouvée")
                         .setMessage("Voulez-vous reprendre la partie ?")
                         .setPositiveButton("Oui", (d, w) -> loadGameSave())
-                        .setNegativeButton("Non", (d, w) -> showGoalConfigDialog())
+                        .setNegativeButton("Non", (d, w) -> showStartConfigDialog())
                         .setCancelable(false)
                         .show();
             } else {
                 showStartConfigDialog();
             }
+        }); // ✅ listener fermé ici
 
-            // MODIFIÉ : dialog choix Manuel/Aléatoire pour le départ
-                new AlertDialog.Builder(this)
-                        .setTitle("Configuration départ")
-                        .setMessage("Comment configurer le départ ?")
-                        .setPositiveButton("Manuel", (d, w) -> {
-                            tvTitle.setText("Configuration départ");
-                            btnNext.setText("Confirmer départ");
-                            btnNext.setVisibility(View.VISIBLE);
-                        })
-                        .setNegativeButton("Aléatoire", (d, w) -> {
-                            plateau.randomizeStart();
-                            plateau.confirmStart();
-                            plateauView.invalidate();
-                            showGoalConfigDialog();
-                        })
-                        .setCancelable(false)
-                        .show();
-                    });
-
-        // MODIFIÉ : btnNext gère confirmStart() et confirmGoal()
         btnNext.setOnClickListener(v -> {
             if (plateau.getState() == GameState.CONFIG_START) {
                 plateau.confirmStart();
@@ -96,26 +82,26 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-        private void showStartConfigDialog() {
-            new AlertDialog.Builder(this)
-                    .setTitle("Configuration départ")
-                    .setMessage("Comment configurer le départ ?")
-                    .setPositiveButton("Manuel", (d, w) -> {
-                        tvTitle.setText("Configuration départ");
-                        btnNext.setText("Confirmer départ");
-                        btnNext.setVisibility(View.VISIBLE);
-                    })
-                    .setNegativeButton("Aléatoire", (d, w) -> {
-                        plateau.randomizeStart();
-                        plateau.confirmStart();
-                        plateauView.invalidate();
-                        showGoalConfigDialog();
-                    })
-                    .setCancelable(false)
-                    .show();
-        }
 
-    // MODIFIÉ : ajout
+    private void showStartConfigDialog() {
+        tvTitle.setText("Configuration départ");
+        new AlertDialog.Builder(this)
+                .setTitle("Configuration départ")
+                .setMessage("Comment configurer le départ ?")
+                .setPositiveButton("Manuel", (d, w) -> {
+                    btnNext.setText("Confirmer départ");
+                    btnNext.setVisibility(View.VISIBLE);
+                })
+                .setNegativeButton("Aléatoire", (d, w) -> {
+                    plateau.randomizeStart();
+                    plateau.confirmStart();
+                    plateauView.invalidate();
+                    showGoalConfigDialog();
+                })
+                .setCancelable(false)
+                .show();
+    }
+
     private void showGoalConfigDialog() {
         tvTitle.setText("Configuration arrivée");
         new AlertDialog.Builder(this)
@@ -135,26 +121,45 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
-    // MODIFIÉ : ajout
     private void startGame() {
-        plateau.confirmGoal(); // sauvegarde arrivée + restore départ
-        //sauvegarde automatique des grille depart et arrivee
-        saveManager.save( (int) Math.sqrt(plateau.getSize()),plateau.getStartGrid(), plateau.getGoalGrid());
+        plateau.confirmGoal();
+        saveManager.save(
+                (int) Math.sqrt(plateau.getSize()),
+                plateau.getStartGrid(),
+                plateau.getGoalGrid()
+        );
         tvTitle.setText("En jeu");
         btnNext.setVisibility(View.GONE);
         plateauView.invalidate();
+
+        int dim = (int) Math.sqrt(plateau.getSize());
+        miniGoalView.setGoalGrid(plateau.getGoalGrid(), dim);
+        miniGoalView.setVisibility(View.VISIBLE);
+        tvGoalLabel.setVisibility(View.VISIBLE);
     }
 
-    //charge la sauvegarde et demarre directement
-    private  void loadGameSave(){
+    private void loadGameSave() {
         int[] startGrid = saveManager.loadStartGrid();
-        int[] goalGrid = saveManager.loadGoalGrid();
-                plateau.setStartGrid(startGrid);
-                plateau.setGoalGrid(goalGrid);
-                plateau.confirmGoal();
+        int[] goalGrid  = saveManager.loadGoalGrid();
 
-                tvTitle.setText("En jeu");
-                btnNext.setVisibility(View.GONE);
-                plateauView.invalidate();
+        // ✅ Guard sauvegarde corrompue
+        if (startGrid == null || goalGrid == null) {
+            saveManager.clear();
+            showStartConfigDialog();
+            return;
+        }
+
+        plateau.setStartGrid(startGrid);
+        plateau.setGoalGrid(goalGrid);
+        plateau.confirmGoal();
+
+        tvTitle.setText("En jeu");
+        btnNext.setVisibility(View.GONE);
+        plateauView.invalidate();
+
+        int dim = (int) Math.sqrt(plateau.getSize());
+        miniGoalView.setGoalGrid(plateau.getGoalGrid(), dim);
+        miniGoalView.setVisibility(View.VISIBLE);
+        tvGoalLabel.setVisibility(View.VISIBLE);
     }
 }
