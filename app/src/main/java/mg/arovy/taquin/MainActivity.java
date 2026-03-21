@@ -6,9 +6,14 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import mg.arovy.taquin.IA.A_star;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
+import java.util.List;
 
 import mg.arovy.taquin.model.GameState;
 import mg.arovy.taquin.model.Plateau;
@@ -23,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvGoalLabel;
     private Plateau plateau;
     private ImageView imgStart;
-    private Button btnNewGame, btnNext, btnResume; // ✅ ajout btnResume
+    private Button btnNewGame, btnNext, btnResume, btnAutoPlay; // ✅ ajout btnResume
     private TextView tvTitle;
     private SaveManager saveManager;
 
@@ -37,9 +42,11 @@ public class MainActivity extends AppCompatActivity {
         btnNewGame   = findViewById(R.id.btnNewGame);
         btnNext      = findViewById(R.id.btnNext);
         btnResume    = findViewById(R.id.btnResume); // ✅ ajout
+        btnAutoPlay  = findViewById(R.id.btnAutoPlay);
         tvTitle      = findViewById(R.id.tvTitle);
         miniGoalView = findViewById(R.id.miniGoalView);
         tvGoalLabel  = findViewById(R.id.tvGoalLabel);
+
 
         saveManager = new SaveManager(this);
 
@@ -94,6 +101,46 @@ public class MainActivity extends AppCompatActivity {
             } else if (plateau.getState() == GameState.CONFIG_END) {
                 startGame();
             }
+        });
+
+        btnAutoPlay.setOnClickListener( v -> {
+            // recupere l'etat actuel et l'objectif depuis le plateau
+            int dimension = (int) Math.sqrt(plateau.getSize());
+            int total = plateau.getSize();
+
+            int[] currentGrid =new int[total];
+            for (int i = 0; i < total; i++) currentGrid[i] = plateau.getCell(i);
+
+            int[] goalGrid = plateau.getGoalGrid();
+
+            // Lancer A* dans un thread separe pour ne pas bloquer l interface
+            new Thread(() -> {
+                A_star solver = new A_star(dimension, goalGrid);
+                List<Integer> moves = solver.solve(currentGrid);
+
+                if (moves == null) {
+                    runOnUiThread(() ->
+                            Toast.makeText(this, "Aucune solution possible", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+
+                // Rejouer chaque mouvement avec un delai de 500ms entre chaque noeud
+                for (int index : moves) {
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        return;
+                    }
+                    runOnUiThread(() -> {
+                        plateau.move(index); // utilise la methode existante sans la modifier
+                        plateauView.invalidate(); // redessine la vue
+
+                        if (plateau.getState() == GameState.FINISHED) {
+                            onGameWon();
+                        }
+                    });
+                }
+            }).start();
         });
     }
 
@@ -150,6 +197,7 @@ public class MainActivity extends AppCompatActivity {
 
         tvTitle.setText("En jeu");
         btnNext.setVisibility(View.GONE);
+        btnAutoPlay.setVisibility(View.VISIBLE);
         plateauView.invalidate();
 
         int dim = (int) Math.sqrt(plateau.getSize());
