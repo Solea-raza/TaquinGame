@@ -34,36 +34,41 @@
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"/>
     <!-- Écran d'accueil -->
-    <ImageView
-        android:id="@+id/imgStart"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:src="@drawable/taquin_image"
+    <LinearLayout
+        android:id="@+id/layoutAccueil"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="16dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:contentDescription="Taquin Image"/>
-    <Button
-        android:id="@+id/btnResume"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Reprendre la partie"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/btnNewGame"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="12dp"/>
-    <Button
-        android:id="@+id/btnNewGame"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Nouvelle partie"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="36dp"/>
+        app:layout_constraintEnd_toEndOf="parent">
 
+        <ImageView
+            android:id="@+id/imgStart"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:src="@drawable/taquin_image"
+            android:contentDescription="Taquin Image"/>
+
+        <Button
+            android:id="@+id/btnResume"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reprendre la partie"
+            android:visibility="gone"
+            android:layout_marginTop="16dp"/>
+
+        <Button
+            android:id="@+id/btnNewGame"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nouvelle partie"
+            android:layout_marginTop="8dp"/>
+
+    </LinearLayout>
     <!-- Titre en haut -->
     <TextView
         android:id="@+id/tvTitle"

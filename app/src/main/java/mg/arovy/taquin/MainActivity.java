@@ -1,26 +1,26 @@
 package mg.arovy.taquin;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import mg.arovy.taquin.IA.A_star;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.List;
 
+import mg.arovy.taquin.IA.A_star;
 import mg.arovy.taquin.model.GameState;
 import mg.arovy.taquin.model.Plateau;
+import mg.arovy.taquin.util.SaveManager;
 import mg.arovy.taquin.views.MiniPlateauView;
 import mg.arovy.taquin.views.PlateauView;
-import mg.arovy.taquin.util.SaveManager;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -28,131 +28,104 @@ public class MainActivity extends AppCompatActivity {
     private MiniPlateauView miniGoalView;
     private TextView tvGoalLabel;
     private Plateau plateau;
-    private ImageView imgStart;
-    private Button btnNewGame, btnNext, btnResume, btnAutoPlay; // ✅ ajout btnResume
-    private ImageButton btnRestart,btnQuit;
+    private Button btnNext, btnAutoPlay, btnNewGame, btnResume;
+    private ImageButton btnRestart, btnQuit;
     private TextView tvTitle;
     private SaveManager saveManager;
+    private LinearLayout layoutAccueil;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        plateauView  = findViewById(R.id.taquinView);
-        imgStart     = findViewById(R.id.imgStart);
-        btnNewGame   = findViewById(R.id.btnNewGame);
-        btnNext      = findViewById(R.id.btnNext);
-        btnAutoPlay  = findViewById(R.id.btnAutoPlay);
-        btnResume    = findViewById(R.id.btnResume);
-        tvTitle      = findViewById(R.id.tvTitle);
-        miniGoalView = findViewById(R.id.miniGoalView);
-        tvGoalLabel  = findViewById(R.id.tvGoalLabel);
-        btnRestart = findViewById(R.id.btnRestart);
-        btnQuit    = findViewById(R.id.btnQuit);
-
+        plateauView   = findViewById(R.id.taquinView);
+        btnNext       = findViewById(R.id.btnNext);
+        btnAutoPlay   = findViewById(R.id.btnAutoPlay);
+        tvTitle       = findViewById(R.id.tvTitle);
+        miniGoalView  = findViewById(R.id.miniGoalView);
+        tvGoalLabel   = findViewById(R.id.tvGoalLabel);
+        btnRestart    = findViewById(R.id.btnRestart);
+        btnQuit       = findViewById(R.id.btnQuit);
+        btnNewGame    = findViewById(R.id.btnNewGame);
+        btnResume     = findViewById(R.id.btnResume);
+        layoutAccueil = findViewById(R.id.layoutAccueil);
 
         saveManager = new SaveManager(this);
 
+        // État initial : tout caché
         plateauView.setVisibility(View.GONE);
         tvTitle.setVisibility(View.GONE);
         btnNext.setVisibility(View.GONE);
         miniGoalView.setVisibility(View.GONE);
         tvGoalLabel.setVisibility(View.GONE);
+        btnAutoPlay.setVisibility(View.GONE);
+        btnRestart.setVisibility(View.GONE);
+        btnQuit.setVisibility(View.GONE);
+        layoutAccueil.setVisibility(View.GONE);
 
-        // affiche un bouton reprendre sur l'écran d'accueil si sauvegarde existe
-        if (saveManager.hasSave()) {
-            btnResume.setVisibility(View.VISIBLE);
+        btnNext.setOnClickListener(v -> handleNext());
+        btnAutoPlay.setOnClickListener(v -> startAutoPlay());
+        btnRestart.setOnClickListener(v -> { plateau.reset(); plateauView.invalidate(); });
+        btnQuit.setOnClickListener(v -> finish());
+
+        // Vérifie si on vient de FormatActivity avec une taille choisie
+        int dim = getIntent().getIntExtra("TAILLE_CHOISIE", -1);
+        if (dim != -1) {
+            startNewGameFlow(dim);
         } else {
-            btnResume.setVisibility(View.GONE);
+            showAccueil();
         }
+    }
 
-        // Reprendre la partie sauvegardée
+    /*** -------------------- ACCUEIL -------------------- ***/
+
+    private void showAccueil() {
+        layoutAccueil.setVisibility(View.VISIBLE);
+        btnResume.setVisibility(saveManager.hasSave() ? View.VISIBLE : View.GONE);
+
+        btnNewGame.setOnClickListener(v -> {
+            Intent intent = new Intent(this, FormatActivity.class);
+            startActivity(intent);
+        });
+
         btnResume.setOnClickListener(v -> {
-            imgStart.setVisibility(View.GONE);
-            btnNewGame.setVisibility(View.GONE);
-            btnResume.setVisibility(View.GONE);
+            int[] startGrid = saveManager.loadStartGrid();
+            if (startGrid == null) {
+                saveManager.clear();
+                return;
+            }
+            // On retrouve la dimension depuis la grille sauvegardée
+            int savedDim = (int) Math.sqrt(startGrid.length);
 
-            plateau = new Plateau(3);
+            layoutAccueil.setVisibility(View.GONE);
+            plateau = new Plateau(savedDim);
             plateauView.setPlateau(plateau);
             plateauView.setVisibility(View.VISIBLE);
             tvTitle.setVisibility(View.VISIBLE);
-
             loadGameSave();
         });
+    }
 
-        // Nouvelle partie
-        btnNewGame.setOnClickListener(v -> {
-            imgStart.setVisibility(View.GONE);
-            btnNewGame.setVisibility(View.GONE);
-            btnResume.setVisibility(View.GONE);
+    /*** -------------------- FLUX NOUVELLE PARTIE -------------------- ***/
 
-            plateau = new Plateau(3);
-            plateau.prepareStart();
+    private void startNewGameFlow(int dim) {
+        plateau = new Plateau(dim);
+        plateau.prepareStart();
+        plateauView.setPlateau(plateau);
+        plateauView.setVisibility(View.VISIBLE);
+        tvTitle.setVisibility(View.VISIBLE);
+        showStartConfigDialog();
+    }
 
-            plateauView.setPlateau(plateau);
-            plateauView.setVisibility(View.VISIBLE);
-            tvTitle.setVisibility(View.VISIBLE);
-
-            showStartConfigDialog();
-        });
-
-        btnNext.setOnClickListener(v -> {
-            if (plateau.getState() == GameState.CONFIG_START) {
-                plateau.confirmStart();
-                plateauView.invalidate();
-                showGoalConfigDialog();
-            } else if (plateau.getState() == GameState.CONFIG_END) {
-                startGame();
-            }
-        });
-
-        btnAutoPlay.setOnClickListener( v -> {
-            // recupere l'etat actuel et l'objectif depuis le plateau
-            int dimension = (int) Math.sqrt(plateau.getSize());
-            int total = plateau.getSize();
-
-            int[] currentGrid =new int[total];
-            for (int i = 0; i < total; i++) currentGrid[i] = plateau.getCell(i);
-
-            int[] goalGrid = plateau.getGoalGrid();
-
-            // Lancer A* dans un thread separe pour ne pas bloquer l interface
-            new Thread(() -> {
-                A_star solver = new A_star(dimension, goalGrid);
-                List<Integer> moves = solver.solve(currentGrid);
-
-                if (moves == null) {
-                    runOnUiThread(() ->
-                            Toast.makeText(this, "Aucune solution possible", Toast.LENGTH_SHORT).show());
-                    return;
-                }
-
-                // Rejouer chaque mouvement avec un delai de 500ms entre chaque noeud
-                for (int index : moves) {
-                    try {
-                        Thread.sleep(500);
-                    } catch (InterruptedException e) {
-                        return;
-                    }
-                    runOnUiThread(() -> {
-                        plateau.move(index); // utilise la methode existante sans la modifier
-                        plateauView.invalidate(); // redessine la vue
-
-                        if (plateau.getState() == GameState.FINISHED) {
-                            onGameWon();
-                        }
-                    });
-                }
-            }).start();
-        });
-        btnRestart.setOnClickListener(v -> {
-            plateau.reset();
+    private void handleNext() {
+        if (plateau.getState() == GameState.CONFIG_START) {
+            plateau.confirmStart();
             plateauView.invalidate();
-        });
-        btnQuit.setOnClickListener(v -> {
-            finish();            // ferme l'activité actuelle
-        });
+            showGoalConfigDialog();
+        } else if (plateau.getState() == GameState.CONFIG_END) {
+            startGame();
+        }
     }
 
     @SuppressLint("SetTextI18n")
@@ -203,44 +176,76 @@ public class MainActivity extends AppCompatActivity {
                 plateau.getStartGrid(),
                 plateau.getGoalGrid()
         );
-        // Sauvegarder l'état initial comme currentGrid aussi
         saveManager.saveCurrentGrid(plateau.getCurrentGrid());
 
         tvTitle.setText("En jeu");
         btnNext.setVisibility(View.GONE);
         btnAutoPlay.setVisibility(View.VISIBLE);
+        btnRestart.setVisibility(View.VISIBLE);
+        btnQuit.setVisibility(View.VISIBLE);
         plateauView.invalidate();
 
         int dim = (int) Math.sqrt(plateau.getSize());
         miniGoalView.setGoalGrid(plateau.getGoalGrid(), dim);
         miniGoalView.setVisibility(View.VISIBLE);
         tvGoalLabel.setVisibility(View.VISIBLE);
-        btnRestart.setVisibility(View.VISIBLE);
-        btnQuit.setVisibility(View.VISIBLE);
     }
+
+    /*** -------------------- AUTOPLAY -------------------- ***/
+
+    private void startAutoPlay() {
+        int dimension = (int) Math.sqrt(plateau.getSize());
+        int total = plateau.getSize();
+
+        int[] currentGrid = new int[total];
+        for (int i = 0; i < total; i++) currentGrid[i] = plateau.getCell(i);
+
+        int[] goalGrid = plateau.getGoalGrid();
+
+        new Thread(() -> {
+            A_star solver = new A_star(dimension, goalGrid);
+            List<Integer> moves = solver.solve(currentGrid);
+
+            if (moves == null) {
+                runOnUiThread(() ->
+                        Toast.makeText(this, "Aucune solution possible", Toast.LENGTH_SHORT).show());
+                return;
+            }
+
+            for (int index : moves) {
+                try { Thread.sleep(500); } catch (InterruptedException e) { return; }
+                runOnUiThread(() -> {
+                    plateau.move(index);
+                    plateauView.invalidate();
+                    if (plateau.getState() == GameState.FINISHED) onGameWon();
+                });
+            }
+        }).start();
+    }
+
+    /*** -------------------- SAUVEGARDE -------------------- ***/
 
     private void loadGameSave() {
         int[] startGrid   = saveManager.loadStartGrid();
         int[] goalGrid    = saveManager.loadGoalGrid();
-        int[] currentGrid = saveManager.loadCurrentGrid(); // ✅ ajout
+        int[] currentGrid = saveManager.loadCurrentGrid();
 
         if (startGrid == null || goalGrid == null || currentGrid == null) {
             saveManager.clear();
-            showStartConfigDialog();
+            showAccueil();
             return;
         }
 
         plateau.setStartGrid(startGrid);
         plateau.setGoalGrid(goalGrid);
-
-// 👇 IMPORTANT : ne pas reset la grille
         plateau.setCurrentGrid(currentGrid);
-
-// remettre juste l’état
         plateau.setState(GameState.PLAYING);
 
         tvTitle.setText("En jeu");
         btnNext.setVisibility(View.GONE);
+        btnAutoPlay.setVisibility(View.VISIBLE);
+        btnRestart.setVisibility(View.VISIBLE);
+        btnQuit.setVisibility(View.VISIBLE);
         plateauView.invalidate();
 
         int dim = (int) Math.sqrt(plateau.getSize());
@@ -248,6 +253,7 @@ public class MainActivity extends AppCompatActivity {
         miniGoalView.setVisibility(View.VISIBLE);
         tvGoalLabel.setVisibility(View.VISIBLE);
     }
+
     @Override
     protected void onPause() {
         super.onPause();
@@ -255,35 +261,29 @@ public class MainActivity extends AppCompatActivity {
             saveManager.saveCurrentGrid(plateau.getCurrentGrid());
         }
     }
-    public SaveManager getSaveManager() {
-        return saveManager;
-    }
+
+    /*** -------------------- FIN DE PARTIE -------------------- ***/
+
     public void onGameWon() {
         new AlertDialog.Builder(this)
                 .setTitle("Victoire")
                 .setMessage("Bravo ! Tu as résolu le taquin !")
                 .setPositiveButton("Nouvelle partie", (d, w) -> {
-                    restartGame();
+                    saveManager.clear();
+                    Intent intent = new Intent(this, MainActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                    finish();
                 })
-                .setNegativeButton("Quitter", (d, w) -> finish())
+                .setNegativeButton("Quitter", (d, w) -> {
+                    saveManager.clear();
+                    finish();
+                })
                 .setCancelable(false)
                 .show();
-
-        saveManager.clear(); // optionnel : supprimer la sauvegarde
     }
-    private void restartGame() {
-        plateau = new Plateau(3); // ou dimension sauvegardée si tu veux être clean
-        plateau.prepareStart();
 
-        plateauView.setPlateau(plateau);
-        plateauView.invalidate();
-
-        tvTitle.setText("Configuration départ");
-
-        miniGoalView.setVisibility(View.GONE);
-        tvGoalLabel.setVisibility(View.GONE);
-        btnNext.setVisibility(View.GONE);
-
-        showStartConfigDialog();
+    public SaveManager getSaveManager() {
+        return saveManager;
     }
 }
